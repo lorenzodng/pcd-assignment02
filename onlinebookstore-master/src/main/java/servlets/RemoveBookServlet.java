@@ -39,7 +39,7 @@ public class RemoveBookServlet extends HttpServlet {
                 // render the remove book form;
                 showRemoveBookForm(pw);
                 return;
-            } // else continue
+            } // else continue*/
 
             String responseCode = bookService.deleteBookById(bookId.trim());
             if (ResponseCode.SUCCESS.name().equalsIgnoreCase(responseCode)) {
