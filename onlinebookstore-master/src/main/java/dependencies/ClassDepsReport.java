@@ -1,27 +1,19 @@
 package dependencies;
 
-import java.util.Set;
+import java.util.HashSet;
 
 public class ClassDepsReport {
 
     private String className;
-    private Set<String> dependencies;
+    private HashSet<String> dependencies;
 
-    public ClassDepsReport(String className, Set<String> dependencies) {
+    public ClassDepsReport(String className, HashSet<String> dependencies) {
         this.className = className;
         this.dependencies = dependencies;
     }
 
-    public String getClassName() {
-        return className;
-    }
-
-    public Set<String> getDependencies() {
-        return dependencies;
-    }
-
     @Override
     public String toString() {
-        return "ClassDepsReport{" + "className: '" + className + '\'' + ", dependencies: " + dependencies + '}';
+        return "Class: '" + className + "'\n" + "Dependencies: " + dependencies + "\n";
     }
 }

@@ -8,10 +8,8 @@ public class DependencyTest {
 
         DependencyAnalyserLib analyser = new DependencyAnalyserLib();
 
-        File classSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model/Cart.java");
+        File classSrcFile = new File("C:/Users/loren/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model/Cart.java");
 
-        analyser.getClassDependencies(classSrcFile).onSuccess(report -> {
-            System.out.println("Dependencies found: " + report);
-        }).onFailure(Throwable::printStackTrace);
+        analyser.getClassDependencies(classSrcFile).onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 }
