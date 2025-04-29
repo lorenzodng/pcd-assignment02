@@ -2,18 +2,17 @@ package dependencies;
 
 import java.util.HashSet;
 
-public class ClassDepsReport {
+public class ClassDepsReport extends DepsReport {
 
-    private String className;
-    private HashSet<String> dependencies;
+    private final HashSet<String> dependencies;
 
-    public ClassDepsReport(String className, HashSet<String> dependencies) {
-        this.className = className;
-        this.dependencies = dependencies;
+    public ClassDepsReport(String name, HashSet<String> dependencies) {
+        super(name);
+        this.dependencies= dependencies;
     }
 
     @Override
     public String toString() {
-        return "Class: '" + className + "'\n" + "Dependencies: " + dependencies + "\n";
+        return "Class: " + name + "\n" + "Dependencies: " + dependencies + "\n";
     }
 }
