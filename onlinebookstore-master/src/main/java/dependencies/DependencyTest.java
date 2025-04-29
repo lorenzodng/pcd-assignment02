@@ -1,15 +1,19 @@
 package dependencies;
 
+import io.vertx.core.Vertx;
+
 import java.io.File;
 
 public class DependencyTest {
 
     public static void main(String[] args) {
 
-        DependencyAnalyserLib analyser = new DependencyAnalyserLib();
+        Vertx vertx = Vertx.vertx();
 
-        File classSrcFile = new File("C:/Users/loren/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model/Cart.java");
+        DependencyAnalyserLib analyser = new DependencyAnalyserLib(vertx);
 
-        analyser.getClassDependencies(classSrcFile).onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
+        File classSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model/Cart.java");
+
+        analyser.getClassDependencies(classSrcFile);
     }
 }
