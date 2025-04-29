@@ -7,6 +7,7 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import static io.vertx.core.Vertx.vertx;
 import io.vertx.core.*;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -21,42 +22,60 @@ public class DependencyAnalyserLib extends AbstractVerticle{
 
     }
 
-    public void getClassDependencies(File classSrcFile) {
-
-        Future<ClassDepsReport> res = vertx().executeBlocking(() -> {
-
-            CompilationUnit cu = StaticJavaParser.parse(classSrcFile); //creo l'oggetto che mi consente di ottenere le dipendenze presenti nella classe
-
-            HashMap<String, String> imports = new HashMap<>();
-            cu.getImports().forEach(imp -> { //ricavo tutti gli import presenti nella classe
-                String fullImport = imp.getNameAsString();
-                String importName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
-                imports.put(fullImport, importName); //li aggiungo a una lista
-            });
-
-            HashSet<String> dependencies = new HashSet<>(imports.values()); //aggiungo solo i nomi degli import in un'altra lista
-            cu.accept(new VoidVisitorAdapter<>() { //ricavo tutte le dipendenze presenti dalla classe in giù (esclusi import)
-                @Override
-                public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
-                    super.visit(n, collector);
-                    String typeName = n.getNameAsString();
-                    if (!dependencies.contains(typeName) && !isJavaLangType(typeName)) {
-                        collector.add(typeName); //considero solo le dipendenze non presenti nell'import (cu.accept prende anche implements, extends ecc. che potrebbero già essere stati recuperati come import)
-                    }
-                }
-            }, dependencies); //aggiungo tutto nella lista dependencies
-
-            return new ClassDepsReport(classSrcFile.getName(), dependencies); //restituisco il risultato
-        });
-
-       res.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
+    public void findClassDependencies(File classSrcFile){
+        Future<ClassDepsReport> fut= getClassDependencies(classSrcFile);
+        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 
-    public void getPackageDependencies(File packageSrcFolder){
+    public void findPackageDependencies(File packageSrcFile){
+        Future<PackageDepsReport> fut= getPackageDependencies(packageSrcFile);
+        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
+    }
 
-        Future<PackageDepsReport> res = vertx.executeBlocking(() -> {
+    public void findProjectDependencies(File projectSrcFile){
+        Future<ProjectDepsReport> fut= getProjectDependencies(projectSrcFile);
+        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
+    }
+
+    private Future<ClassDepsReport> getClassDependencies(File classSrcFile) {
+
+        return vertx().executeBlocking(promise -> {
+            try {
+                CompilationUnit cu = StaticJavaParser.parse(classSrcFile); //creo l'oggetto che mi consente di ottenere le dipendenze presenti nella classe
+
+                HashMap<String, String> imports = new HashMap<>();
+                cu.getImports().forEach(imp -> { //ricavo tutti gli import presenti nella classe
+                    String fullImport = imp.getNameAsString();
+                    String importName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
+                    imports.put(fullImport, importName); //li aggiungo a una lista
+                });
+
+                HashSet<String> dependencies = new HashSet<>(imports.values()); //aggiungo solo i nomi degli import in un'altra lista
+                cu.accept(new VoidVisitorAdapter<>() { //ricavo tutte le dipendenze presenti dalla classe in giù (esclusi import)
+                    @Override
+                    public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
+                        super.visit(n, collector);
+                        String typeName = n.getNameAsString();
+                        if (!dependencies.contains(typeName) && !isJavaLangType(typeName)) {
+                            collector.add(typeName); //considero solo le dipendenze non presenti nell'import (cu.accept prende anche implements, extends ecc. che potrebbero già essere stati recuperati come import)
+                        }
+                    }
+                }, dependencies); //aggiungo tutto nella lista dependencies
+
+                ClassDepsReport classDepsReport = new ClassDepsReport(classSrcFile.getName(), dependencies); //restituisco il risultato
+                promise.complete(classDepsReport);
+
+            } catch (FileNotFoundException e) {
+                promise.fail(e);
+            }
+        });
+    }
+
+    private Future<PackageDepsReport> getPackageDependencies(File packageSrcFolder){
+
+        return vertx.executeBlocking(promise -> {
             HashMap<String, HashSet<String>> classToDependencies = new HashMap<>(); //utilizzo una hashmap per associare ogni classe(key) alle sue dipendenze
-            try{
+            try {
                 Files.walk(packageSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> { //navigo all'interno del package ed esamino tutti i file .java
                     File classFile = path.toFile(); //estrapolo ogni classe presente nel package e la tratto come un file separato
                     try {
@@ -82,25 +101,23 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                         }, dependencies);
 
                         classToDependencies.put(classFile.getName(), dependencies); //qui aggiungo di volta in volta tutte le classi del package con le rispettive dipendenze
-
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
                         e.printStackTrace();
                     }
                 });
+                PackageDepsReport packageDepsReport = new PackageDepsReport(packageSrcFolder.getName(), classToDependencies);
+                promise.complete(packageDepsReport);
             } catch (IOException e) {
                 System.err.println("Error while visiting directory '" + packageSrcFolder.getName() + "'");
                 e.printStackTrace();
             }
-            return new PackageDepsReport(packageSrcFolder.getName(), classToDependencies);
         });
-
-        res.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 
-    public void getProjectDependencies(File projectSrcFolder) {
+    private Future<ProjectDepsReport> getProjectDependencies(File projectSrcFolder) {
 
-        Future<ProjectDepsReport> res = vertx.executeBlocking(() -> {
+        return vertx.executeBlocking(promise -> {
             HashSet<String> projectDependencies = new HashSet<>();
             try {
                 Files.walk(projectSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> {
@@ -129,22 +146,21 @@ public class DependencyAnalyserLib extends AbstractVerticle{
 
                         projectDependencies.addAll(dependencies);
 
+
+
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
                         e.printStackTrace();
                     }
                 });
+                ProjectDepsReport projectDepsReport = new ProjectDepsReport(projectSrcFolder.getName(), projectDependencies);
+                promise.complete(projectDepsReport);
             } catch (IOException e) {
                 System.err.println("Error while walking through project folder: " + projectSrcFolder.getName());
                 e.printStackTrace();
             }
-
-            return new ProjectDepsReport(projectSrcFolder.getName(), projectDependencies);
         });
-
-        res.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
-
 
     private boolean isJavaLangType(String typeName) { //per verificare se la dipendenza fa parte di java.lang (escludo queste dipendenze)
         try {
