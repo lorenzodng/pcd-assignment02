@@ -2,17 +2,14 @@ package dependencies;
 
 import java.util.HashSet;
 
-public class ProjectDepsReport extends DepsReport{
-
-    private final HashSet<String> dependencies;
+public class ProjectDepsReport extends DepsReport {
 
     public ProjectDepsReport(String name, HashSet<String> dependencies) {
-        super(name);
-        this.dependencies = dependencies;
+        super(name, dependencies);
     }
 
     @Override
     public String toString() {
-        return "Project: '" + name + "'\nDependencies: " + dependencies + "\n";
+        return "Project: \"" + name + "\" \n" + "Dependencies: \n" + printDependencies() + "\n";
     }
 }

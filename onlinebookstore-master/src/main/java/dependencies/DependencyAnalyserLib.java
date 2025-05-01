@@ -19,147 +19,183 @@ public class DependencyAnalyserLib extends AbstractVerticle{
 
     public DependencyAnalyserLib(Vertx vertx) {
         this.vertx = vertx;
-
     }
 
     public void findClassDependencies(File classSrcFile){
-        Future<ClassDepsReport> fut= getClassDependencies(classSrcFile);
+        Future<ClassDepsReport> fut = getClassDependencies(classSrcFile);
         fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 
     public void findPackageDependencies(File packageSrcFile){
-        Future<PackageDepsReport> fut= getPackageDependencies(packageSrcFile);
+        Future<PackageDepsReport> fut = getPackageDependencies(packageSrcFile);
         fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 
     public void findProjectDependencies(File projectSrcFile){
-        Future<ProjectDepsReport> fut= getProjectDependencies(projectSrcFile);
+        Future<ProjectDepsReport> fut = getProjectDependencies(projectSrcFile);
         fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
     }
 
     private Future<ClassDepsReport> getClassDependencies(File classSrcFile) {
+        Promise<ClassDepsReport> mainPromise = Promise.promise();
+        HashMap<String, String> imports = new HashMap<>();
+        HashSet<String> usedTypes = new HashSet<>();
 
-        return vertx().executeBlocking(promise -> {
+        vertx().executeBlocking(promise -> {
             try {
-                CompilationUnit cu = StaticJavaParser.parse(classSrcFile); //creo l'oggetto che mi consente di ottenere le dipendenze presenti nella classe
-
-                HashMap<String, String> imports = new HashMap<>();
-                cu.getImports().forEach(imp -> { //ricavo tutti gli import presenti nella classe
-                    String fullImport = imp.getNameAsString();
-                    String importName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
-                    imports.put(fullImport, importName); //li aggiungo a una lista
-                });
-
-                HashSet<String> dependencies = new HashSet<>(imports.values()); //aggiungo solo i nomi degli import in un'altra lista
-                cu.accept(new VoidVisitorAdapter<>() { //ricavo tutte le dipendenze presenti dalla classe in giù (esclusi import)
-                    @Override
-                    public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
-                        super.visit(n, collector);
-                        String typeName = n.getNameAsString();
-                        if (!dependencies.contains(typeName) && !isJavaLangType(typeName)) {
-                            collector.add(typeName); //considero solo le dipendenze non presenti nell'import (cu.accept prende anche implements, extends ecc. che potrebbero già essere stati recuperati come import)
-                        }
-                    }
-                }, dependencies); //aggiungo tutto nella lista dependencies
-
-                ClassDepsReport classDepsReport = new ClassDepsReport(classSrcFile.getName(), dependencies); //restituisco il risultato
-                promise.complete(classDepsReport);
-
+                CompilationUnit cu = StaticJavaParser.parse(classSrcFile);
+                HashMap<String, String> importResults = searchImport(cu);
+                imports.putAll(importResults);
+                HashSet<String> usedTypesResults = searchUsedType(cu);
+                usedTypes.addAll(usedTypesResults);
+                promise.complete();
             } catch (FileNotFoundException e) {
-                promise.fail(e);
+                System.err.println("Error while parsing '" + classSrcFile.getName() + "'");
+                e.printStackTrace();
             }
+        }).onSuccess((res) -> {
+            HashSet<String> dependencies = mergeDependencies(imports, usedTypes);
+            ClassDepsReport classDepsReport = new ClassDepsReport(classSrcFile.getName(), dependencies);
+            mainPromise.complete(classDepsReport);
         });
+        return mainPromise.future();
     }
 
     private Future<PackageDepsReport> getPackageDependencies(File packageSrcFolder){
+        Promise<PackageDepsReport> mainPromise = Promise.promise();
+        HashMap<String, String> imports = new HashMap<>();
+        HashSet<String> usedTypes = new HashSet<>();
 
-        return vertx.executeBlocking(promise -> {
-            HashMap<String, HashSet<String>> classToDependencies = new HashMap<>(); //utilizzo una hashmap per associare ogni classe(key) alle sue dipendenze
+        vertx.executeBlocking(promise -> {
             try {
                 Files.walk(packageSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> { //navigo all'interno del package ed esamino tutti i file .java
                     File classFile = path.toFile(); //estrapolo ogni classe presente nel package e la tratto come un file separato
                     try {
                         CompilationUnit cu = StaticJavaParser.parse(classFile);
-
-                        HashMap<String, String> imports = new HashMap<>();
-                        cu.getImports().forEach(imp -> {
-                            String fullImport = imp.getNameAsString();
-                            String importName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
-                            imports.put(fullImport, importName);
-                        });
-
-                        HashSet<String> dependencies = new HashSet<>(imports.values()); //questa conterrà solo le dipendenze trovate per la classe
-                        cu.accept(new VoidVisitorAdapter<>() {
-                            @Override
-                            public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
-                                super.visit(n, collector);
-                                String typeName = n.getNameAsString();
-                                if (!dependencies.contains(typeName) && !isJavaLangType(typeName)) {
-                                    collector.add(typeName);
-                                }
-                            }
-                        }, dependencies);
-
-                        classToDependencies.put(classFile.getName(), dependencies); //qui aggiungo di volta in volta tutte le classi del package con le rispettive dipendenze
+                        HashMap<String, String> importResults = searchImport(cu);
+                        imports.putAll(importResults);
+                        HashSet<String> usedTypesResults = searchUsedType(cu);
+                        usedTypes.addAll(usedTypesResults);
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
                         e.printStackTrace();
                     }
                 });
-                PackageDepsReport packageDepsReport = new PackageDepsReport(packageSrcFolder.getName(), classToDependencies);
-                promise.complete(packageDepsReport);
+                promise.complete();
             } catch (IOException e) {
                 System.err.println("Error while visiting directory '" + packageSrcFolder.getName() + "'");
                 e.printStackTrace();
             }
+        }).onSuccess((res) -> {
+            HashSet<String> dependencies = mergeDependencies(imports, usedTypes);
+            PackageDepsReport packageDepsReport = new PackageDepsReport(packageSrcFolder.getName(), dependencies);
+            mainPromise.complete(packageDepsReport);
         });
+        return mainPromise.future();
     }
 
     private Future<ProjectDepsReport> getProjectDependencies(File projectSrcFolder) {
+        Promise<ProjectDepsReport> mainPromise = Promise.promise();
+        HashMap<String, String> imports = new HashMap<>();
+        HashSet<String> usedTypes = new HashSet<>();
 
-        return vertx.executeBlocking(promise -> {
-            HashSet<String> projectDependencies = new HashSet<>();
+        Future<Void> importFuture = vertx.executeBlocking(promise -> {
             try {
                 Files.walk(projectSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> {
                     File classFile = path.toFile();
                     try {
                         CompilationUnit cu = StaticJavaParser.parse(classFile);
-                        HashMap<String, String> imports = new HashMap<>();
-
-                        cu.getImports().forEach(imp -> {
-                            String fullImport = imp.getNameAsString();
-                            String importName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
-                            imports.put(fullImport, importName);
-                        });
-
-                        HashSet<String> dependencies = new HashSet<>(imports.values());
-                        cu.accept(new VoidVisitorAdapter<>() {
-                            @Override
-                            public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
-                                super.visit(n, collector);
-                                String typeName = n.getNameAsString();
-                                if (!collector.contains(typeName) && !isJavaLangType(typeName)) {
-                                    collector.add(typeName);
-                                }
-                            }
-                        }, dependencies);
-
-                        projectDependencies.addAll(dependencies);
-
-
-
+                        HashMap<String, String> result = searchImport(cu);
+                        imports.putAll(result);
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
                         e.printStackTrace();
                     }
                 });
-                ProjectDepsReport projectDepsReport = new ProjectDepsReport(projectSrcFolder.getName(), projectDependencies);
-                promise.complete(projectDepsReport);
-            } catch (IOException e) {
-                System.err.println("Error while walking through project folder: " + projectSrcFolder.getName());
-                e.printStackTrace();
+                promise.complete();
+            } catch (Exception e) {
+                System.err.println("Error while visiting project '" + projectSrcFolder.getName() + "'");
+                promise.fail(e);
             }
         });
+
+        Future<Void> usedTypesFuture = vertx.executeBlocking(promise -> {
+            try {
+                Files.walk(projectSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> {
+                    File classFile = path.toFile();
+                    try {
+                        CompilationUnit cu = StaticJavaParser.parse(classFile);
+                        HashSet<String> results = searchUsedType(cu);
+                        usedTypes.addAll(results);
+                    } catch (Exception e) {
+                        System.err.println("Error while parsing '" + classFile.getName() + "'");
+                        promise.fail(e);
+                    }
+                });
+                promise.complete();
+            } catch (IOException e) {
+                System.err.println("Error while visiting project '" + projectSrcFolder.getName() + "'");
+                promise.fail(e);
+            }
+        });
+
+        Future.all(importFuture, usedTypesFuture).onSuccess( res -> {
+            vertx.executeBlocking(promise -> {
+                HashSet<String> dependencies = mergeDependencies(imports, usedTypes);
+                ProjectDepsReport projectDepsReport = new ProjectDepsReport(projectSrcFolder.getName(), dependencies);
+                mainPromise.complete(projectDepsReport);
+            });
+        });
+
+        return mainPromise.future();
+    }
+
+    private HashMap<String, String> searchImport(CompilationUnit cu) throws FileNotFoundException {
+        HashMap<String, String> imports = new HashMap<>();
+
+        cu.getImports().forEach(imp -> {
+            String fullImport = imp.getNameAsString();
+            String simpleName = fullImport.substring(fullImport.lastIndexOf('.') + 1);
+            imports.put(simpleName, fullImport);
+        });
+        return imports;
+    }
+
+    private HashSet<String> searchUsedType(CompilationUnit cu){
+        HashSet<String> usedTypes = new HashSet<>();
+
+        cu.accept(new VoidVisitorAdapter<>() {
+            @Override
+            public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
+                super.visit(n, collector);
+                String typeName = n.getNameAsString();
+                if (!isJavaLangType(typeName)) {
+                    collector.add(typeName);
+                }
+            }
+        }, usedTypes);
+        return usedTypes;
+    }
+
+    private HashSet<String> mergeDependencies(HashMap<String, String> imports, HashSet<String> usedTypes) {
+        HashSet<String> dependencies = new HashSet<>();
+
+        for (HashMap.Entry<String, String> entry : imports.entrySet()) { //scorro negli import ricavati
+            String simpleName = entry.getKey();
+            String fullName = entry.getValue();
+            if (usedTypes.contains(simpleName)) { //se un import è usato
+                dependencies.add(simpleName); //metti il nome semplice
+            } else {
+                dependencies.add(fullName); //altrimenti metto il nome completo
+            }
+        }
+
+        for (String type : usedTypes) {  //scorro nei tipi ricavati
+            if (!imports.containsKey(type)) { //aggiungo gli altri tipi usati che non sono tra gli import
+                dependencies.add(type);
+            }
+        }
+        return dependencies;
     }
 
     private boolean isJavaLangType(String typeName) { //per verificare se la dipendenza fa parte di java.lang (escludo queste dipendenze)
