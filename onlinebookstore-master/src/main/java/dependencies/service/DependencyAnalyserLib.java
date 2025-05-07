@@ -1,10 +1,14 @@
-package dependencies;
+package dependencies.service;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import static io.vertx.core.Vertx.vertx;
+
+import dependencies.model.ClassDepsReport;
+import dependencies.model.PackageDepsReport;
+import dependencies.model.ProjectDepsReport;
 import io.vertx.core.*;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -72,6 +76,9 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                     File classFile = path.toFile(); //estrapolo ogni classe presente nel package e la tratto come un file separato
                     try {
                         CompilationUnit cu = StaticJavaParser.parse(classFile);
+                        if (cu.getTypes().isEmpty() || !cu.getType(0).isClassOrInterfaceDeclaration()) {
+                            return;
+                        }
                         HashMap<String, String> importResults = searchImport(cu);
                         imports.putAll(importResults);
                         HashSet<String> usedTypesResults = searchUsedType(cu);
@@ -98,13 +105,15 @@ public class DependencyAnalyserLib extends AbstractVerticle{
         Promise<ProjectDepsReport> mainPromise = Promise.promise();
         HashMap<String, String> imports = new HashMap<>();
         HashSet<String> usedTypes = new HashSet<>();
-
         Future<Void> importFuture = vertx.executeBlocking(promise -> {
             try {
                 Files.walk(projectSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> {
                     File classFile = path.toFile();
                     try {
                         CompilationUnit cu = StaticJavaParser.parse(classFile);
+                        if (cu.getTypes().isEmpty() || !cu.getType(0).isClassOrInterfaceDeclaration()) {
+                            return;
+                        }
                         HashMap<String, String> result = searchImport(cu);
                         imports.putAll(result);
                     } catch (Exception e) {
@@ -125,6 +134,9 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                     File classFile = path.toFile();
                     try {
                         CompilationUnit cu = StaticJavaParser.parse(classFile);
+                        if (cu.getTypes().isEmpty() || !cu.getType(0).isClassOrInterfaceDeclaration()) {
+                            return;
+                        }
                         HashSet<String> results = searchUsedType(cu);
                         usedTypes.addAll(results);
                     } catch (Exception e) {
@@ -184,7 +196,7 @@ public class DependencyAnalyserLib extends AbstractVerticle{
             String simpleName = entry.getKey();
             String fullName = entry.getValue();
             if (usedTypes.contains(simpleName)) { //se un import è usato
-                dependencies.add(simpleName); //metti il nome semplice
+                dependencies.add(simpleName); //metto il nome semplice
             } else {
                 dependencies.add(fullName); //altrimenti metto il nome completo
             }

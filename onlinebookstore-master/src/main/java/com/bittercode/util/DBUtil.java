@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import com.bittercode.constant.ResponseCode;
+import com.bittercode.model.Address;
 import com.bittercode.model.StoreException;
+import com.bittercode.model.UserRole;
 
 public class DBUtil {
 

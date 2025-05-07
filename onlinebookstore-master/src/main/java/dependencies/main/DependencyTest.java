@@ -1,5 +1,6 @@
-package dependencies;
+package dependencies.main;
 
+import dependencies.service.DependencyAnalyserLib;
 import io.vertx.core.Vertx;
 
 import java.io.File;
@@ -11,7 +12,7 @@ public class DependencyTest {
         Vertx vertx = Vertx.vertx();
         DependencyAnalyserLib analyser = new DependencyAnalyserLib(vertx);
 
-        File classSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/dependencies/DependencyAnalyserLib.java");
+        File classSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/dependencies/service/DependencyAnalyserLib.java");
         System.out.println("");
         analyser.findClassDependencies(classSrcFile);
         File packageSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model");

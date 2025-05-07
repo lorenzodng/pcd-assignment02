@@ -1,4 +1,4 @@
-package dependencies;
+package dependencies.model;
 
 import java.util.HashSet;
 
