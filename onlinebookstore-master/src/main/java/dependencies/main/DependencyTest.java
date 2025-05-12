@@ -12,14 +12,14 @@ public class DependencyTest {
         Vertx vertx = Vertx.vertx();
         DependencyAnalyserLib analyser = new DependencyAnalyserLib(vertx);
 
-        File classSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/dependencies/service/DependencyAnalyserLib.java");
+        File classSrcFile = new File("C:/Users/loren/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/dependencies/service/DependencyAnalyserLib.java");
         System.out.println("");
         analyser.findClassDependencies(classSrcFile);
-        File packageSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model");
-        analyser.findPackageDependencies(packageSrcFile);
+        File packageSrcFile = new File("C:/Users/loren/IdeaProjects/pcd-assignment02/onlinebookstore-master/src/main/java/com/bittercode/model");
+        //analyser.findPackageDependencies(packageSrcFile);
         System.out.println("");
-        File projectSrcFile = new File("C:/Users/matti/IdeaProjects/pcd-assignment02");
-        analyser.findProjectDependencies(projectSrcFile);
+        File projectSrcFile = new File("C:/Users/loren/IdeaProjects/pcd-assignment02");
+        //analyser.findProjectDependencies(projectSrcFile);
 
     }
 }

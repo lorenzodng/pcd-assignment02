@@ -4,9 +4,9 @@ import java.util.HashSet;
 
 public class ProjectDepsReport {
 
-    private String type;
-    private String name;
-    private HashSet<String> dependencies;
+    private final String type;
+    private final String name;
+    private final HashSet<String> dependencies;
 
     public ProjectDepsReport(String type, String name, HashSet<String> dependencies) {
         this.type = type;

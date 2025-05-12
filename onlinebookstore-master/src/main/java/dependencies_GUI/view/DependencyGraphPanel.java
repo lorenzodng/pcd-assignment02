@@ -13,8 +13,7 @@ public class DependencyGraphPanel extends JPanel {
     private final Object root;
     private final mxGraphComponent graphComponent;
     private final HashMap<String, Object> vertexMap;
-    private double zoomFactor = 1.2;
-
+    private static final double ZOOM_FACTOR = 1.2;
 
     public DependencyGraphPanel() {
         super(new BorderLayout());
@@ -48,14 +47,14 @@ public class DependencyGraphPanel extends JPanel {
     public void zoomIn() {
         double maxScale = 10.0;
         double currentScale = graph.getView().getScale();
-        double newScale = Math.min(currentScale * zoomFactor, maxScale);
+        double newScale = Math.min(currentScale * ZOOM_FACTOR, maxScale);
         graphComponent.zoomTo(newScale, false);
     }
 
     public void zoomOut() {
         double minScale = 0.01;
         double currentScale = graph.getView().getScale();
-        double newScale = Math.max(currentScale / zoomFactor, minScale);
+        double newScale = Math.max(currentScale / ZOOM_FACTOR, minScale);
         graphComponent.zoomTo(newScale, false);
     }
 }

@@ -27,7 +27,7 @@ public class DependencyAnalyser {
         Observable.fromIterable(getAllJavaFiles(rootFolder))
                 .subscribeOn(Schedulers.io())  //eseguo l'analisi su un pool di thread
                 .map(file -> analyseClass(file))
-                .filter(result -> !result.getType().equals("Skipped"))//analizzo ogni file
+                .filter(result -> !result.getType().equals("Skipped")) //analizzo ogni file di tipo classe o interfaccia
                 .subscribe(info -> {
                     dependencyAnalyserController.updateStats(info, view);
                 });
@@ -50,7 +50,7 @@ public class DependencyAnalyser {
     private ProjectDepsReport analyseClass(File file) throws Exception {
         CompilationUnit cu = StaticJavaParser.parse(file);
         HashMap<String, String> imports = searchImport(cu);
-        HashSet<String> usedTypes = searchUsedType(imports, cu);
+        HashSet<String> references = searchReferences(imports, cu);
         String type = "Unknown";
         if (!cu.getTypes().isEmpty()) {
             var typeDecl = cu.getType(0);
@@ -62,7 +62,7 @@ public class DependencyAnalyser {
 
         Thread.sleep(1000);
 
-        return new ProjectDepsReport(type, file.getName(), usedTypes);
+        return new ProjectDepsReport(type, file.getName(), references);
     }
 
     private HashMap<String, String> searchImport(CompilationUnit cu) {
@@ -75,21 +75,21 @@ public class DependencyAnalyser {
         return imports;
     }
 
-    private HashSet<String> searchUsedType(HashMap<String, String> imports, CompilationUnit cu){
-        HashSet<String> usedTypes = new HashSet<>();
+    private HashSet<String> searchReferences(HashMap<String, String> imports, CompilationUnit cu){
+        HashSet<String> references = new HashSet<>();
         cu.accept(new VoidVisitorAdapter<>() {
             @Override
             public void visit(ClassOrInterfaceType n, HashSet<String> collector) {
                 super.visit(n, collector);
                 String typeName = n.getNameAsString();
                 if (!imports.containsKey(typeName) && isJavaLangType(typeName)) {
-                    usedTypes.add(typeName);
+                    references.add(typeName);
                 } else if (isJavaLangType(typeName)){
-                    usedTypes.add(imports.get(typeName));
+                    references.add(imports.get(typeName));
                 }
             }
-        }, usedTypes);
-        return usedTypes;
+        }, references);
+        return references;
     }
 
     private boolean isJavaLangType(String typeName) {

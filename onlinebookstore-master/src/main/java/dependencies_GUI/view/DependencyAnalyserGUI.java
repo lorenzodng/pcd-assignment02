@@ -1,8 +1,7 @@
 package dependencies_GUI.view;
 
-import dependencies_GUI.model.DependencyAnalyser;
+import dependencies_GUI.controller.DependencyAnalyserController;
 import dependencies_GUI.model.ProjectDepsReport;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -11,17 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DependencyAnalyserGUI {
 
-    private final JButton startButton;
-    private final JButton browseButton;
     private final JLabel selectedFolderLabel;
     private final JTextArea outputArea;
     private final JLabel classCountLabel;
     private final JLabel depCountLabel;
     private final DependencyGraphPanel graphPanel;
     private final JFrame frame;
-
-    private final JButton zoomInButton = new JButton("+");
-    private final JButton zoomOutButton = new JButton("–");
 
     public DependencyAnalyserGUI() {
         frame = new JFrame("Dependencies");
@@ -32,8 +26,8 @@ public class DependencyAnalyserGUI {
         cp.setLayout(new BorderLayout());
 
         // componenti
-        browseButton = new JButton("Browse Folder");
-        startButton = new JButton("Start");
+        JButton browseButton = new JButton("Browse Folder");
+        JButton startButton = new JButton("Start");
         selectedFolderLabel = new JLabel("No project selected");
         classCountLabel = new JLabel("Classes/Interfaces: 0");
         depCountLabel = new JLabel("Dependencies: 0");
@@ -55,7 +49,7 @@ public class DependencyAnalyserGUI {
             }
         });
 
-        startButton.addActionListener(this::startSimulation);
+        startButton.addActionListener(this::startAnalysis);
 
         JPanel selectedLabelPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         selectedLabelPanel.add(selectedFolderLabel);
@@ -85,7 +79,9 @@ public class DependencyAnalyserGUI {
 
         // pannello per il controllo dello zoom
         JPanel zoomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER)); // Cambiato FlowLayout per centratura
+        JButton zoomInButton = new JButton("+");
         zoomPanel.add(zoomInButton);
+        JButton zoomOutButton = new JButton("–");
         zoomPanel.add(zoomOutButton);
 
         // aggiungo il pannello dello zoom direttamente in basso al pannello del grafo
@@ -111,18 +107,18 @@ public class DependencyAnalyserGUI {
         frame.setContentPane(cp);
     }
 
-    private void startSimulation(ActionEvent e) {
+    private void startAnalysis(ActionEvent e) {
         if (selectedFolderLabel.getText().equals("No project selected")) {
             JOptionPane.showMessageDialog(frame, "Select a project first.");
         }else{
             File rootFolder = new File(selectedFolderLabel.getText().replace("Selected: ", ""));
             outputArea.append(" Finding dependencies in \"" + rootFolder.getName() + "\"...\n\n");
-            DependencyAnalyser dependencyAnalyser = new DependencyAnalyser();
-            dependencyAnalyser.analyse(rootFolder, this);
+            DependencyAnalyserController dependencyAnalyserController = new DependencyAnalyserController();
+            dependencyAnalyserController.start(rootFolder, this);
         }
     }
 
-    public void updateUI(ProjectDepsReport info, AtomicInteger classCount, AtomicInteger depCount){
+    public void updateGUI(ProjectDepsReport info, AtomicInteger classCount, AtomicInteger depCount){
         SwingUtilities.invokeLater(() -> {
             classCountLabel.setText("Classes/Interfaces: " + classCount);
             depCountLabel.setText("Dependencies: " + depCount);

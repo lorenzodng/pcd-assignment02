@@ -8,6 +8,5 @@ public class DependencyTest {
 
         DependencyAnalyserGUI analyser = new DependencyAnalyserGUI();
         analyser.display();
-
     }
 }

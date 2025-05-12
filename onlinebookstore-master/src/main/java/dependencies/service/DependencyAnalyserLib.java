@@ -5,7 +5,6 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import static io.vertx.core.Vertx.vertx;
-
 import dependencies.model.ClassDepsReport;
 import dependencies.model.PackageDepsReport;
 import dependencies.model.ProjectDepsReport;
@@ -27,18 +26,45 @@ public class DependencyAnalyserLib extends AbstractVerticle{
 
     public void findClassDependencies(File classSrcFile){
         Future<ClassDepsReport> fut = getClassDependencies(classSrcFile);
-        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
-    }
+        fut.onSuccess((res) -> {
+            System.out.println(res.toString());
+            vertx.close(ar -> {
+                if (ar.succeeded()) {
+                    System.exit(0);
+                } else {
+                    ar.cause().printStackTrace();
+                    System.exit(1);
+                }
+            });
+        }).onFailure(Throwable::printStackTrace);    }
 
     public void findPackageDependencies(File packageSrcFile){
         Future<PackageDepsReport> fut = getPackageDependencies(packageSrcFile);
-        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
-    }
+        fut.onSuccess((res) -> {
+            System.out.println(res.toString());
+            vertx.close(ar -> {
+                if (ar.succeeded()) {
+                    System.exit(0);
+                } else {
+                    ar.cause().printStackTrace();
+                    System.exit(1);
+                }
+            });
+        }).onFailure(Throwable::printStackTrace);    }
 
     public void findProjectDependencies(File projectSrcFile){
         Future<ProjectDepsReport> fut = getProjectDependencies(projectSrcFile);
-        fut.onSuccess(System.out::println).onFailure(Throwable::printStackTrace);
-    }
+        fut.onSuccess((res) -> {
+            System.out.println(res.toString());
+            vertx.close(ar -> {
+                if (ar.succeeded()) {
+                    System.exit(0);
+                } else {
+                    ar.cause().printStackTrace();
+                    System.exit(1);
+                }
+            });
+        }).onFailure(Throwable::printStackTrace);    }
 
     private Future<ClassDepsReport> getClassDependencies(File classSrcFile) {
         Promise<ClassDepsReport> mainPromise = Promise.promise();
@@ -50,8 +76,8 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                 CompilationUnit cu = StaticJavaParser.parse(classSrcFile);
                 HashMap<String, String> importResults = searchImport(cu);
                 imports.putAll(importResults);
-                HashSet<String> usedTypesResults = searchUsedType(cu);
-                usedTypes.addAll(usedTypesResults);
+                HashSet<String> referencesResults = searchReferences(cu);
+                usedTypes.addAll(referencesResults);
                 promise.complete();
             } catch (FileNotFoundException e) {
                 System.err.println("Error while parsing '" + classSrcFile.getName() + "'");
@@ -81,8 +107,8 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                         }
                         HashMap<String, String> importResults = searchImport(cu);
                         imports.putAll(importResults);
-                        HashSet<String> usedTypesResults = searchUsedType(cu);
-                        usedTypes.addAll(usedTypesResults);
+                        HashSet<String> referencesResults = searchReferences(cu);
+                        usedTypes.addAll(referencesResults);
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
                         e.printStackTrace();
@@ -128,7 +154,7 @@ public class DependencyAnalyserLib extends AbstractVerticle{
             }
         });
 
-        Future<Void> usedTypesFuture = vertx.executeBlocking(promise -> {
+        Future<Void> referencesFuture = vertx.executeBlocking(promise -> {
             try {
                 Files.walk(projectSrcFolder.toPath()).filter(path -> path.toString().endsWith(".java")).forEach(path -> {
                     File classFile = path.toFile();
@@ -137,7 +163,7 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                         if (cu.getTypes().isEmpty() || !cu.getType(0).isClassOrInterfaceDeclaration()) {
                             return;
                         }
-                        HashSet<String> results = searchUsedType(cu);
+                        HashSet<String> results = searchReferences(cu);
                         usedTypes.addAll(results);
                     } catch (Exception e) {
                         System.err.println("Error while parsing '" + classFile.getName() + "'");
@@ -151,7 +177,7 @@ public class DependencyAnalyserLib extends AbstractVerticle{
             }
         });
 
-        Future.all(importFuture, usedTypesFuture).onSuccess( res -> {
+        Future.all(importFuture, referencesFuture).onSuccess( res -> {
             vertx.executeBlocking(promise -> {
                 HashSet<String> dependencies = mergeDependencies(imports, usedTypes);
                 ProjectDepsReport projectDepsReport = new ProjectDepsReport(projectSrcFolder.getName(), dependencies);
@@ -173,8 +199,8 @@ public class DependencyAnalyserLib extends AbstractVerticle{
         return imports;
     }
 
-    private HashSet<String> searchUsedType(CompilationUnit cu){
-        HashSet<String> usedTypes = new HashSet<>();
+    private HashSet<String> searchReferences(CompilationUnit cu){
+        HashSet<String> references = new HashSet<>();
 
         cu.accept(new VoidVisitorAdapter<>() {
             @Override
@@ -185,24 +211,24 @@ public class DependencyAnalyserLib extends AbstractVerticle{
                     collector.add(typeName);
                 }
             }
-        }, usedTypes);
-        return usedTypes;
+        }, references);
+        return references;
     }
 
-    private HashSet<String> mergeDependencies(HashMap<String, String> imports, HashSet<String> usedTypes) {
+    private HashSet<String> mergeDependencies(HashMap<String, String> imports, HashSet<String> references) {
         HashSet<String> dependencies = new HashSet<>();
 
         for (HashMap.Entry<String, String> entry : imports.entrySet()) { //scorro negli import ricavati
             String simpleName = entry.getKey();
             String fullName = entry.getValue();
-            if (usedTypes.contains(simpleName)) { //se un import è usato
+            if (references.contains(simpleName)) { //se un import è usato
                 dependencies.add(simpleName); //metto il nome semplice
             } else {
                 dependencies.add(fullName); //altrimenti metto il nome completo
             }
         }
 
-        for (String type : usedTypes) {  //scorro nei tipi ricavati
+        for (String type : references) {  //scorro nei tipi ricavati
             if (!imports.containsKey(type)) { //aggiungo gli altri tipi usati che non sono tra gli import
                 dependencies.add(type);
             }
