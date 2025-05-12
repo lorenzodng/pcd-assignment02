@@ -16,7 +16,7 @@ public class DependencyAnalyserController {
         dependencyAnalyser.analyse(rootFolder, dependencyAnalyserGUI);
     }
 
-    public void updateStats(ProjectDepsReport info, DependencyAnalyserGUI view){
+    public void updateDependencies(ProjectDepsReport info, DependencyAnalyserGUI view){
         classCount.incrementAndGet();
         for(String ignored: info.getDependencies()){
             depCount.incrementAndGet();

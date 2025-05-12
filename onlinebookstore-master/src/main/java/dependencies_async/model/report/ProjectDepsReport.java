@@ -1,4 +1,6 @@
-package dependencies_async.model;
+package dependencies_async.model.report;
+
+import dependencies_async.model.DepsReport;
 
 import java.util.HashSet;
 

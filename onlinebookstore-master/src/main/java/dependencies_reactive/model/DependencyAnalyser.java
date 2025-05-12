@@ -29,7 +29,7 @@ public class DependencyAnalyser {
                 .map(file -> analyseClass(file))
                 .filter(result -> !result.getType().equals("Skipped")) //analizzo ogni file di tipo classe o interfaccia
                 .subscribe(info -> {
-                    dependencyAnalyserController.updateStats(info, view);
+                    dependencyAnalyserController.updateDependencies(info, view);
                 });
     }
 
