@@ -1,6 +1,6 @@
-package dependencies.main;
+package dependencies_async.main;
 
-import dependencies.service.DependencyAnalyserLib;
+import dependencies_async.service.DependencyAnalyserLib;
 import io.vertx.core.Vertx;
 
 import java.io.File;

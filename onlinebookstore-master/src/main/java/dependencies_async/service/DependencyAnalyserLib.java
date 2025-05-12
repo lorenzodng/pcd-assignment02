@@ -1,13 +1,13 @@
-package dependencies.service;
+package dependencies_async.service;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import static io.vertx.core.Vertx.vertx;
-import dependencies.model.ClassDepsReport;
-import dependencies.model.PackageDepsReport;
-import dependencies.model.ProjectDepsReport;
+import dependencies_async.model.ClassDepsReport;
+import dependencies_async.model.PackageDepsReport;
+import dependencies_async.model.ProjectDepsReport;
 import io.vertx.core.*;
 import java.io.File;
 import java.io.FileNotFoundException;

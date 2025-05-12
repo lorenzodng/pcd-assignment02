@@ -1,7 +1,7 @@
-package dependencies_GUI.view;
+package dependencies_reactive.view;
 
-import dependencies_GUI.controller.DependencyAnalyserController;
-import dependencies_GUI.model.ProjectDepsReport;
+import dependencies_reactive.controller.DependencyAnalyserController;
+import dependencies_reactive.model.ProjectDepsReport;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;

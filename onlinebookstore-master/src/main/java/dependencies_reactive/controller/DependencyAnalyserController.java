@@ -1,8 +1,8 @@
-package dependencies_GUI.controller;
+package dependencies_reactive.controller;
 
-import dependencies_GUI.model.DependencyAnalyser;
-import dependencies_GUI.model.ProjectDepsReport;
-import dependencies_GUI.view.DependencyAnalyserGUI;
+import dependencies_reactive.model.DependencyAnalyser;
+import dependencies_reactive.model.ProjectDepsReport;
+import dependencies_reactive.view.DependencyAnalyserGUI;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 

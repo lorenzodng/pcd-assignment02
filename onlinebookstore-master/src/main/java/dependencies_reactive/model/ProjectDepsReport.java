@@ -1,4 +1,4 @@
-package dependencies_GUI.model;
+package dependencies_reactive.model;
 
 import java.util.HashSet;
 

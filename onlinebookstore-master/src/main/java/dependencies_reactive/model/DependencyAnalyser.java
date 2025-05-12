@@ -1,11 +1,11 @@
-package dependencies_GUI.model;
+package dependencies_reactive.model;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-import dependencies_GUI.controller.DependencyAnalyserController;
-import dependencies_GUI.view.DependencyAnalyserGUI;
+import dependencies_reactive.controller.DependencyAnalyserController;
+import dependencies_reactive.view.DependencyAnalyserGUI;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.File;

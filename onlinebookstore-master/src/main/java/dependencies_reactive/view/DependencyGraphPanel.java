@@ -1,4 +1,4 @@
-package dependencies_GUI.view;
+package dependencies_reactive.view;
 
 import com.mxgraph.layout.mxCircleLayout;
 import com.mxgraph.swing.mxGraphComponent;

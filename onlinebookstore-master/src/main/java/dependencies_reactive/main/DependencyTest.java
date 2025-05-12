@@ -1,6 +1,6 @@
-package dependencies_GUI.main;
+package dependencies_reactive.main;
 
-import dependencies_GUI.view.DependencyAnalyserGUI;
+import dependencies_reactive.view.DependencyAnalyserGUI;
 
 public class DependencyTest {
 

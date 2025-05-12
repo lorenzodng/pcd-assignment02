@@ -1,4 +1,4 @@
-package dependencies.model;
+package dependencies_async.model;
 
 import java.util.HashSet;
 
